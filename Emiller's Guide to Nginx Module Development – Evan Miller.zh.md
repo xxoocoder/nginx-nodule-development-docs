@@ -9,16 +9,6 @@ First published: April 28, 2007 (Last edit: August 11, 2017)
 
 ---
 
-# Emiller’s Guide To Nginx Module Development
-# [译文: Emiller’s Guide To Nginx Module Development]
-
-By Evan Miller
-
-作者：Evan Miller
-
-First published: April 28, 2007 (Last edit: August 11, 2017 – changes)
-
-首次发布：2007年4月28日（最后编辑：2017年8月11日 - 变更记录）
 
 ## Table of Contents
 ## 目录
@@ -34,7 +24,7 @@ First published: April 28, 2007 (Last edit: August 11, 2017 – changes)
 9. Code References
 
 1. 前提条件
-2. [译文: High-Level Overview of Nginx’s Module Delegation]
+2. Nginx 模块委托的高级概述
 3. Nginx 模块的组件
 4. 处理器
 5. 过滤器
@@ -54,7 +44,7 @@ You should be comfortable with C. Not just "C-syntax"; you should know your way 
 
 Basic understanding of HTTP is useful. You’ll be working on a web server, after all.
 
-[译文: Basic understanding of HTTP is useful. You’ll be working on a web server, after all.]
+对 HTTP 的基本理解很有用。毕竟，您将在 Web 服务器上工作。
 
 You should also be familiar with Nginx’s configuration file. If you’re not, here’s the gist of it: there
                 are four contexts (called main, server, upstream, and
@@ -66,26 +56,18 @@ You should also be familiar with Nginx’s configuration file. If you’re not, 
                 context neither inherits nor imparts its properties; it has its own special directives that don’t really
                 apply elsewhere. I’ll refer to these four contexts quite a bit, so… don’t forget them.
 
-[译文: You should also be familiar with Nginx’s configuration file. If you’re not, here’s the gist of it: there
-                are four contexts (called main, server, upstream, and
-                location) which can contain directives with one or more arguments. Directives in the main
-                context apply to everything; directives in the server context apply to a particular host/port;
-                directives in the upstream context refer to a set of backend servers; and directives in a location
-                context apply only to matching web locations (e.g., "/", "/images", etc.) A location context inherits
-                from the surrounding server context, and a server context inherits from the main context. The upstream
-                context neither inherits nor imparts its properties; it has its own special directives that don’t really
-                apply elsewhere. I’ll refer to these four contexts quite a bit, so… don’t forget them.]
+您还应该熟悉 Nginx 的配置文件。如果您不熟悉，这里是要点：有四个上下文（称为 main、server、upstream 和 location），它们可以包含带有一个或多个参数的指令。main 上下文中的指令适用于所有内容；server 上下文中的指令适用于特定的主机/端口；upstream 上下文中的指令指向一组后端服务器；location 上下文中的指令仅适用于匹配的 Web 位置（例如"/"、"/images"等）。location 上下文从周围的 server 上下文继承，server 上下文从 main 上下文继承。upstream 上下文既不继承也不传递其属性；它有自己的特殊指令，这些指令在其他地方并不适用。我会经常提到这四个上下文，所以...不要忘记它们。
 
 Let’s get started.
 
-[译文: Let’s get started.]
+让我们开始吧。
 
 ## 1. High-Level Overview of Nginx’s Module Delegation
-## [译文: 1. High-Level Overview of Nginx’s Module Delegation]
+## 1. Nginx 模块委托的高级概述
 
 Nginx modules have three roles we’ll cover:
 
-[译文: Nginx modules have three roles we’ll cover:]
+我们将介绍 Nginx 模块的三个角色：
 
 - handlers process a request and produce output
 - filters manipulate the output produced by a handler
@@ -94,8 +76,7 @@ Nginx modules have three roles we’ll cover:
 
 - 处理器处理请求并产生输出
 - 过滤器操作处理器产生的输出
-- [译文: load-balancers choose a backend server to send a request to, when more than one backend
-                    server is eligible]
+- 负载均衡器在有多个后端服务器可用时选择发送请求的后端服务器
 
 Modules do all of the "real work" that you might associate with a web server: whenever Nginx serves a
                 file or proxies a request to another server, there’s a handler module doing the work; when Nginx gzips
@@ -104,7 +85,7 @@ Modules do all of the "real work" that you might associate with a web server: wh
                 eligible to process a request. The de-centralized architecture makes it possible for you to
                 make a nice self-contained unit that does something you want.
 
-[译文: Modules do all of the "real work" that you might associate with a web server: whenever Nginx serves a
+模块完成您可能与 Web 服务器相关联的所有"实际工作"：每当 Nginx 提供
                 file or proxies a request to another server, there’s a handler module doing the work; when Nginx gzips
                 the output or executes a server-side include, it’s using filter modules. The "core" of Nginx simply
                 takes care of all the network and application protocols and sets up the sequence of modules that are
@@ -114,7 +95,7 @@ Modules do all of the "real work" that you might associate with a web server: wh
 Note: Unlike modules in Apache, Nginx modules are not dynamically linked. (In other words,
                 they’re compiled right into the Nginx binary.)
 
-[译文: Note: Unlike modules in Apache, Nginx modules are not dynamically linked. (In other words,
+注意：与 Apache 中的模块不同，Nginx 模块不是动态链接的。（换句话说，
                 they’re compiled right into the Nginx binary.)]
 
 How does a module get invoked? Typically, at server startup, each handler gets a chance to attach itself
@@ -123,7 +104,7 @@ How does a module get invoked? Typically, at server startup, each handler gets a
                 return in three ways: all is good, there was an error, or it can decline to process the request and
                 defer to the default handler (typically something that serves static files).
 
-[译文: How does a module get invoked? Typically, at server startup, each handler gets a chance to attach itself
+模块如何被调用？通常，在服务器启动时，每个处理器都有机会将自己附加
                 to particular locations defined in the configuration; if more than one handler attaches to a particular
                 location, only one will "win" (but a good config writer won’t let a conflict happen). Handlers can
                 return in three ways: all is good, there was an error, or it can decline to process the request and
@@ -135,7 +116,7 @@ If the handler happens to be a reverse proxy to some set of backend servers, the
                 which deals out requests like cards at the start of a poker game, and the "IP hash" method, which
                 ensures that a particular client will hit the same backend server across multiple requests.
 
-[译文: If the handler happens to be a reverse proxy to some set of backend servers, there is room for another
+如果处理器碰巧是到某组后端服务器的反向代理，那么就有另一种
                 type of module: the load-balancer. A load-balancer takes a request and a set of backend servers and
                 decides which server will get the request. Nginx ships with two load-balancing modules: round-robin,
                 which deals out requests like cards at the start of a poker game, and the "IP hash" method, which
@@ -147,7 +128,7 @@ If the handler does not produce an error, the filters are called. Multiple filte
                 pattern: one filter is called, does its work, and then calls the next filter, until the final filter is
                 called, and Nginx finishes up the response.
 
-[译文: If the handler does not produce an error, the filters are called. Multiple filters can hook into each
+如果处理器没有产生错误，就会调用过滤器。多个过滤器可以挂钩到每个
                 location, so that (for example) a response can be compressed and then chunked. The order of their
                 execution is determined at compile-time. Filters have the classic "CHAIN OF RESPONSIBILITY" design
                 pattern: one filter is called, does its work, and then calls the next filter, until the final filter is
@@ -176,7 +157,7 @@ So to wrap up the conceptual overview, the typical processing cycle goes:
                     each output buffer to the first filter → First filter passes the output to the second filter
                     → second to third → third to fourth → etc. → Final response sent to client
 
-> [译文: Client sends HTTP request → Nginx chooses the appropriate handler based on the location config
+> 客户端发送 HTTP 请求 → Nginx 根据位置配置选择适当的处理器
                     → (if applicable) load-balancer picks a backend server → Handler does its thing and passes
                     each output buffer to the first filter → First filter passes the output to the second filter
                     → second to third → third to fourth → etc. → Final response sent to client]
@@ -186,7 +167,7 @@ Client sends HTTP request → Nginx chooses the appropriate handler based on the
                     each output buffer to the first filter → First filter passes the output to the second filter
                     → second to third → third to fourth → etc. → Final response sent to client
 
-[译文: Client sends HTTP request → Nginx chooses the appropriate handler based on the location config
+客户端发送 HTTP 请求 → Nginx 根据位置配置选择适当的处理器
                     → (if applicable) load-balancer picks a backend server → Handler does its thing and passes
                     each output buffer to the first filter → First filter passes the output to the second filter
                     → second to third → third to fourth → etc. → Final response sent to client]
@@ -256,19 +237,19 @@ As I said, you have a lot of flexibility when it comes to making an Nginx module
                 will describe the parts that are almost always present. It’s intended as a guide for understanding a
                 module, and a reference for when you think you’re ready to start writing a module.
 
-[译文: As I said, you have a lot of flexibility when it comes to making an Nginx module. This section
+如我所说，在制作 Nginx 模块时您有很大的灵活性。本节
                 will describe the parts that are almost always present. It’s intended as a guide for understanding a
                 module, and a reference for when you think you’re ready to start writing a module.]
 
 ### 2.1. Module Configuration Struct(s)
-### [译文: 2.1. Module Configuration Struct(s)]
+### 2.1. 模块配置结构体
 
 Modules can define up to three configuration structs, one for the main, server, and location contexts.
                 Most modules just need a location configuration. The naming convention for these is
                 ngx_http_<module name>_(main|srv|loc)_conf_t. Here’s an example, taken from the dav
                 module:
 
-[译文: Modules can define up to three configuration structs, one for the main, server, and location contexts.
+模块可以定义最多三个配置结构体，分别用于 main、server 和 location 上下文。
                 Most modules just need a location configuration. The naming convention for these is
                 ngx_http_<module name>_(main|srv|loc)_conf_t. Here’s an example, taken from the dav
                 module:]
@@ -286,7 +267,7 @@ Notice that Nginx has special data types (ngx_uint_t and ngx_flag_t); these are
                 just aliases for the primitive data types you know and love (cf. core/ngx_config.h
                 if you’re curious).
 
-[译文: Notice that Nginx has special data types (ngx_uint_t and ngx_flag_t); these are
+注意 Nginx 有特殊的数据类型（ngx_uint_t 和 ngx_flag_t）；这些是
                 just aliases for the primitive data types you know and love (cf. core/ngx_config.h
                 if you’re curious).]
 
